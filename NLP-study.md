@@ -44,11 +44,11 @@ N-gram最大的问题就是**稀疏问题（Sparsity）**。
 
 + Add-one
 
-  ![image-20210604171906517](C:\Users\ASUS\AppData\Roaming\Typora\typora-user-images\image-20210604171906517.png)
+  ![image-20210604171906517](images/image-20210604171906517-1626749063079.png)
 
 + Add-K
 
-  ![image-20210604171926408](C:\Users\ASUS\AppData\Roaming\Typora\typora-user-images\image-20210604171926408.png)
+  ![image-20210604171926408](images/image-20210604171926408-1626749065804.png)
 
 Good-Turning 平滑
 
