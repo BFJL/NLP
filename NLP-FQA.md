@@ -276,29 +276,114 @@ self-attention和attention的区别（说了一堆好像没答道点上，最核
 
 ## Transformer
 
-介绍一下transformer。有什么可以调整的参数。
+**介绍一下transformer？**
 
-transformer的并行，encoder decoder的细节结构
+Transformer 本身还是一个典型的 encoder-decoder 模型，如果从模型层面来看，Transformer 实际上就像一个 seq2seq with attention 的模型。
 
-transformer多头的意义是什么
+参数：Encoder 6层，Decoder 6层，隐层512维，Forward 2048，多头8个，K V矩阵维度64（512/8），drop 0.1， Label Smoothing
 
-transformer没用position embedding 而是position encoding
+**transformer为何使用多头注意力机制？**
+
+多头的注意力**有助于网络捕捉到更丰富的特征/信息。使用多头注意力，也就是综合利用各方面的信息/特征**。还可以正则化手段来保证每个头关注不同的子空间（[Multi-Head Attention with Disagreement Regularization](https://link.zhihu.com/?target=https%3A//arxiv.org/abs/1810.10183)）
+
+**Transformer为什么Q和K使用不同的权重矩阵生成，为何不能使用同一个值进行自身的点乘？**
+
+两个向量的点乘表示两个向量的相似度， 如果在同一个向量空间里进行点乘，理所应当的是自身和自身的相似度最大，那会影响其他向量对自己的作用，使用Q/K/V 不相同，保证在不同空间进行投影，增强表达能力，提高泛化能力。
+
+**Transformer计算attention的时候为何选择点乘而不是加法？两者计算复杂度和效果上有什么区别？**
+
+为了计算更快。矩阵加法在加法这一块的计算量确实简单，但是作为一个整体计算attention的时候相当于一个隐层，整体计算量和点积相似。在效果上来说，从实验分析，两者的效果和dk相关，dk越大，加法的效果越显著。
+
+**transformer 一个block中最耗时的部分？**
+
+block里面包括 self-attention, layer-norm, feed-forward, self attention里面，要将三个enc映射到不同的子空间，然后再点乘，还要normlizar，所以self attention最耗时。
+
+**为什么在进行softmax之前需要对attention进行scaled（为什么除以dk的平方根），并使用公式推导进行讲解？**
+
+- 维度越高，整个向量的方差越大，会出现很大的值和很小的值。
+- 计算softmax的梯度时候，由于softmax的梯度导数，会导致梯度变小。
+- [公式推导讲解](https://link.zhihu.com/?target=https%3A//blog.csdn.net/qq_37430422/article/details/105042303)。
+
+**计算attention score的时候如何对padding做mask操作？**
+
+mask就是让这部分值取无穷小，让他再softmax之后基本也为0，不去影响非attention socore的分布
+
+**介绍一下Transformer的位置编码？有什么意义和优缺点？**
+
+当抛弃循环神经网络结构，完全采用Attention取而代之，这些词序信息就会丢失，模型就没有办法知道每个词在句子中的相对和绝对的位置信息。因此，有必要把词序信号加到词向量上帮助模型学习这些信息，位置编码（Positional Encoding）就是用来解决这种问题的方法。
+
+位置编码（Positional Encoding）是一种用词的位置信息对序列中的每个词进行二次表示的方法。
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+
+def get_angles(pos, i, d_model):
+    """计算pos/100002i/dmodel"""
+    angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
+    print('-----pos/100002i/dmodel--------')
+    print(angle_rates)
+    return pos * angle_rates
+
+def positional_encoding(position, d_model):
+    angle_rads = get_angles(np.arange(position)[:, np.newaxis], 
+                            np.arange(d_model)[np.newaxis, :],
+                            d_model)
+    print('---angle_rads---')
+    print(angle_rads)
+    # 对数组中的偶数下标2i应用sin
+    angle_rads[:, 0::2] = np.sin(angle_rads[:, 0::2])
+
+    # 对数组中的奇数下标2i+1应用cos
+    angle_rads[:, 1::2] = np.cos(angle_rads[:, 1::2])
+    print('-----sin--cos---')
+    print(angle_rads)
+    # 增加一个新得维度
+    pos_encoding = angle_rads[np.newaxis, ...]
+    print('----pos----')
+    print(pos_encoding)
+    return pos_encoding
+
+
+tokens = 5
+dimensions = 10
+
+pos_encoding = positional_encoding(tokens, dimensions)
+print (pos_encoding.shape)
+
+plt.figure(figsize=(20,10))
+plt.pcolormesh(pos_encoding[0], cmap='viridis')
+plt.xlabel('Embedding Dimensions')
+plt.xlim((0, dimensions))
+
+plt.ylabel('Token Position')
+plt.ylim((tokens,0))
+
+plt.colorbar()
+plt.show()
+```
+
+**为什么transformer块使用LayerNorm而不是BatchNorm？LayerNorm 在Transformer的位置是哪里，BN使用场景和layer_norm区别？**
+
+对于使用场景来说，BN在MLP和CNN上使用的效果都比较好，在RNN这种动态文本模型上使用的比较差。
+
+BN在MLP中的应用。 BN是对每个特征在batch_size上求的均值和方差，如果BN应用到NLP任务，相当于是在对默认了在同一个位置的单词对应的是同一种特征，
+
+layer_norm针对的是文本的长度，整条序列的文本，所以比bn好。
+
+**残差结构意义？**
+
+防止梯度消失，帮助深层网络训练
+
+**Transformer 相比于 RNN/LSTM，有什么优势？为什么？**
+
+（1） RNN 系列的模型，并行计算能力很差， 但其实真实的耗时从业务上来讲，长query，transformer更快，短query，lstm更快。
+
+（2）Transformer 的特征抽取能力比 RNN 系列的模型要好，transform可以动态建立输入序列的长程依赖关系，类似于一层全链接，
 
 transformer中的参数共享
 
-transformer同LSTM这些有什么区别和关系?
-
-transformer结构
-
-transformer用的是哪种attention机制？
-
-30、Transformer 原理。手撕
-
-31、Transformer Encoder 与Decoder 有哪些不同？
-
-了解seq2seq吗?有没有用过对应的transformer进行对应的使用项目?
-
-画一下Transformer结构图
+transformer结构图
 
 ## Bert
 
