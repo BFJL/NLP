@@ -240,7 +240,9 @@ word2vec经过霍夫曼或者负采样之后，模型与原模型相比，是等
 
 ## Attention
 
-多头注意力机制的原理是什么？
+**多头注意力机制的原理是什么？**
+
+**模型在对当前位置的信息进行编码时，会过度的将注意力集中于自身的位置，** 因此作者提出了通过多头注意力机制来解决这一问题。同时，使用多头注意力机制还能够给予注意力层的输出包含有不同子空间中的编码表示信息，从而增强模型的表达能力。
 
 具体讲一下self attention。
 
@@ -381,9 +383,21 @@ layer_norm针对的是文本的长度，整条序列的文本，所以比bn好�
 
 （2）Transformer 的特征抽取能力比 RNN 系列的模型要好，transform可以动态建立输入序列的长程依赖关系，类似于一层全链接，
 
-transformer中的参数共享
+**transformer中的参数共享？**
 
-transformer结构图
+Transformer在两个地方进行了权重共享：
+
+**（1）**Encoder和Decoder间的Embedding层权重共享；
+
+**（2）**Decoder中Embedding层和FC层权重共享。
+
+**transformer结构图？**
+
+![image-20210726144951212](NLP-FQA_images/image-20210726144951212.png)
+
+注意力
+
+![image-20210726145018446](NLP-FQA_images/image-20210726145018446.png)
 
 ## Bert
 
